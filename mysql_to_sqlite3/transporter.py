@@ -278,7 +278,7 @@ class MySQLtoSQLite:
                 "CURRENT_TIMESTAMP",
             }:
                 return "DEFAULT {}".format(column_default.upper())
-        return "DEFAULT '{}'".format(column_default)
+        return "DEFAULT {}".format(column_default.strip('b'))
 
     @classmethod
     def _data_type_collation_sequence(
