@@ -278,7 +278,7 @@ class MySQLtoSQLite:
                 "CURRENT_TIMESTAMP",
             }:
                 return "DEFAULT {}".format(column_default.upper())
-        return "DEFAULT '{}'".format(column_default)
+        return "DEFAULT {}".format(column_default.strip('b'))
 
     @classmethod
     def _data_type_collation_sequence(
@@ -305,7 +305,8 @@ class MySQLtoSQLite:
             return False
 
     def _build_create_table_sql(self, table_name):
-        sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
+        # sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
+        sql = 'CREATE TABLE IF NOT EXISTS "{}"\n\t--{}\n('.format(table_name, self._mysql_database)
         primary = ""
         indices = ""
 
