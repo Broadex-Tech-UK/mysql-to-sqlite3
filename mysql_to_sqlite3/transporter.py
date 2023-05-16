@@ -33,6 +33,7 @@ if six.PY2:
 class MySQLtoSQLite:
     """Use this class to transfer a MySQL database to SQLite."""
 
+    BIT_PATTERN = re.compile(r"b'([01]+)'")
     COLUMN_PATTERN = re.compile(r"^[^(]+")
     COLUMN_LENGTH_PATTERN = re.compile(r"\(\d+\)$")
 
@@ -140,7 +141,7 @@ class MySQLtoSQLite:
             if not self._mysql.is_connected():
                 raise ConnectionError("Unable to connect to MySQL")
 
-            self._mysql_cur = self._mysql.cursor(buffered=self._buffered, raw=True)
+            self._mysql_cur = self._mysql.cursor(buffered=self._buffered)
             self._mysql_cur_prepared = self._mysql.cursor(prepared=True)
             self._mysql_cur_dict = self._mysql.cursor(
                 buffered=self._buffered,
@@ -229,7 +230,6 @@ class MySQLtoSQLite:
         }:
             return data_type
         if data_type in {
-            "BIT",
             "BINARY",
             "LONGBLOB",
             "MEDIUMBLOB",
@@ -241,7 +241,7 @@ class MySQLtoSQLite:
             return data_type + cls._column_type_length(column_type)
         if data_type == "CHAR":
             return "CHARACTER" + cls._column_type_length(column_type)
-        if data_type == "INT":
+        if data_type == "INT" or data_type == "BIT":
             return "INTEGER"
         if data_type in "TIMESTAMP":
             return "DATETIME"
@@ -278,7 +278,12 @@ class MySQLtoSQLite:
                 "CURRENT_TIMESTAMP",
             }:
                 return "DEFAULT {}".format(column_default.upper())
-        return "DEFAULT {}".format(column_default.strip('b'))
+
+        bit_match = cls.BIT_PATTERN.match(column_default)
+        if bit_match:
+            return "DEFAULT {}".format(int(bit_match.group(1), 2))
+
+        return "DEFAULT {}".format(column_default)
 
     @classmethod
     def _data_type_collation_sequence(
@@ -460,7 +465,9 @@ class MySQLtoSQLite:
                     sql,
                     (
                         tuple(
-                            encode_data_for_sqlite(col) if col is not None else None
+                            # encode_data_for_sqlite(col) if col is not None else None
+                            # for col in row
+                            col if col is not None else None
                             for col in row
                         )
                         for row in tqdm(
